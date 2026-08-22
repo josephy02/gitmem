@@ -3,7 +3,8 @@ import type { Capability, EventFilter, MemEvent } from "./types.js";
 /** Segment-aware prefix match: "team/core" grants "team/core" and descendants,
  *  but not "team/core-secrets". */
 export function scopeContains(prefix: string, scope: string): boolean {
-  if (scope === prefix) return true;
+  if (prefix === "" || scope === prefix) return true; // "" grants everything
+
   return scope.startsWith(prefix + "/");
 }
 

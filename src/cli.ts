@@ -30,10 +30,10 @@ function fail(msg: string, code = 1): never {
   process.exit(code);
 }
 
-function run(fn: () => void): () => void {
-  return () => {
+function run<A extends unknown[]>(fn: (...args: A) => void): (...args: A) => void {
+  return (...args: A) => {
     try {
-      fn();
+      fn(...args);
     } catch (err) {
       if (err instanceof ValidationError) fail(err.message);
       fail(err instanceof Error ? err.message : String(err));
@@ -178,24 +178,24 @@ program
   .command("show <id>")
   .description("event + full derivation chain")
   .action(
-    run((id?: string) => {
-      const node = MemLog.open(root()).trace(capability(), id!);
+    run((id: string) => {
+      const node = MemLog.open(root()).trace(capability(), id);
       process.stdout.write(JSON.stringify(node, null, 2) + "\n");
-    }) as (id: string) => void,
+    }),
   );
 
 program
   .command("trace <id>")
   .description("ancestry tree, one line per hop")
   .action(
-    run((id?: string) => {
-      const node = MemLog.open(root()).trace(capability(), id!);
+    run((id: string) => {
+      const node = MemLog.open(root()).trace(capability(), id);
       const walk = (n: typeof node, depth: number) => {
         process.stdout.write(`${"  ".repeat(depth)}${n.event.id} [${n.event.kind}] ${n.event.body.slice(0, 80)}\n`);
         for (const d of n.derived_from) walk(d, depth + 1);
       };
       walk(node, 0);
-    }) as (id: string) => void,
+    }),
   );
 
 program
@@ -249,15 +249,15 @@ program
   .command("merge-driver <ours> <theirs>", { hidden: true })
   .description("git merge driver: union of lines, sorted by ULID")
   .action(
-    run(((ours?: string, theirs?: string) => {
+    run((ours: string, theirs: string) => {
       const read = (f: string) => fs.readFileSync(f, "utf8").split("\n").filter((l) => l.trim() !== "");
-      const lines = [...new Set([...read(ours!), ...read(theirs!)])];
+      const lines = [...new Set([...read(ours), ...read(theirs)])];
       lines.sort((a, b) => {
         const ia = (JSON.parse(a) as MemEvent).id, ib = (JSON.parse(b) as MemEvent).id;
         return ia < ib ? -1 : ia > ib ? 1 : 0;
       });
-      fs.writeFileSync(ours!, lines.join("\n") + (lines.length ? "\n" : ""));
-    }) as () => void) as (ours: string, theirs: string) => void,
+      fs.writeFileSync(ours, lines.join("\n") + (lines.length ? "\n" : ""));
+    }),
   );
 
 program.parse();
