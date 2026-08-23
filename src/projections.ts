@@ -110,21 +110,40 @@ function detectConflicts(facts: Fact[], eventKind: Map<string, string>, now: str
     if (editors.length >= 2) add(editors.map((f) => f.id), "explicit");
   }
 
-  // pairwise, same scope subtree only
-  for (let i = 0; i < live.length; i++) {
-    for (let j = i + 1; j < live.length; j++) {
-      const a = live[i], b = live[j];
-      if (!scopeContains(a.scope, b.scope) && !scopeContains(b.scope, a.scope)) continue;
-      const na = normalize(a.body), nb = normalize(b.body);
-      // negation: bodies differ only by a negation marker
-      if (na !== nb && stripNegations(na) === stripNegations(nb)) {
-        add([a.id, b.id], "negation");
-        continue;
+  // hash-bucketed instead of full pairwise: candidates share either a
+  // negation-stripped body or a leading 4-token phrase, so group by those keys
+  // and compare only within groups. Groups are tiny on real corpora.
+  const norms = new Map(live.map((f) => [f.id, normalize(f.body)]));
+  const sameSubtree = (a: Fact, b: Fact) => scopeContains(a.scope, b.scope) || scopeContains(b.scope, a.scope);
+
+  const byStripped = new Map<string, Fact[]>();
+  for (const f of live) {
+    const key = stripNegations(norms.get(f.id)!);
+    (byStripped.get(key) ?? byStripped.set(key, []).get(key)!).push(f);
+  }
+  for (const group of byStripped.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i], b = group[j];
+        if (norms.get(a.id) !== norms.get(b.id) && sameSubtree(a, b)) add([a.id, b.id], "negation");
       }
-      // same-subject divergence: identical leading noun phrase, dissimilar remainder
-      const ta = na.split(" "), tb = nb.split(" ");
-      if (ta.length > 4 && tb.length > 4 && ta.slice(0, 4).join(" ") === tb.slice(0, 4).join(" ")) {
-        const ra = new Set(ta.slice(4)), rb = new Set(tb.slice(4));
+    }
+  }
+
+  const byLead = new Map<string, Fact[]>();
+  for (const f of live) {
+    const tokens = norms.get(f.id)!.split(" ");
+    if (tokens.length <= 4) continue;
+    const key = tokens.slice(0, 4).join(" ");
+    (byLead.get(key) ?? byLead.set(key, []).get(key)!).push(f);
+  }
+  for (const group of byLead.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i], b = group[j];
+        if (!sameSubtree(a, b)) continue;
+        const ra = new Set(norms.get(a.id)!.split(" ").slice(4));
+        const rb = new Set(norms.get(b.id)!.split(" ").slice(4));
         const inter = [...ra].filter((t) => rb.has(t)).length;
         const union = new Set([...ra, ...rb]).size;
         if (union > 0 && inter / union < 0.5) add([a.id, b.id], "divergence");

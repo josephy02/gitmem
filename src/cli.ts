@@ -77,12 +77,13 @@ program
   .option("--author <kind:id>", "e.g. agent:builder-3", "human:owner")
   .option("--force", "bypass the ±24h clock-skew guard (imports)")
   .option("--json", "read one event (or NDJSON stream) from stdin")
+  .argument("[file]", 'NDJSON file for --json, or "-" for stdin', "-")
   .action(
-    run(() => {
+    run((file: string) => {
       const log = MemLog.open(root());
       const opts = (program.commands.find((c) => c.name() === "append") as Command).opts();
       if (opts.json) {
-        const input = fs.readFileSync(0, "utf8");
+        const input = fs.readFileSync(file === "-" ? 0 : file, "utf8");
         for (const line of input.split("\n")) {
           if (line.trim() === "") continue;
           const e = JSON.parse(line) as Partial<MemEvent> & { force?: boolean };
