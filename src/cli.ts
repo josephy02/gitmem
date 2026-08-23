@@ -3,20 +3,20 @@ import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Command } from "commander";
-import { MemLog } from "./memlog.js";
+import { GitMem } from "./gitmem.js";
 import { ValidationError } from "./log.js";
 import type { Capability, Config, FactStatus, MemEvent } from "./types.js";
 
-const program = new Command().name("memlog").description("Git-native, append-only agent memory");
-program.option("--root <path>", "memlog root", process.env.MEMLOG_ROOT ?? ".");
-program.option("--as <principal>", "act as this principal from memlog.config.json");
+const program = new Command().name("gitmem").description("Git-native, append-only agent memory");
+program.option("--root <path>", "gitmem root", process.env.GITMEM_ROOT ?? ".");
+program.option("--as <principal>", "act as this principal from gitmem.config.json");
 
 function root(): string {
   return path.resolve(program.opts().root);
 }
 
 function capability(): Capability {
-  const config = JSON.parse(fs.readFileSync(path.join(root(), "memlog.config.json"), "utf8")) as Config;
+  const config = JSON.parse(fs.readFileSync(path.join(root(), "gitmem.config.json"), "utf8")) as Config;
   const principal = program.opts().as as string | undefined;
   const cap = principal
     ? config.capabilities.find((c) => c.principal === principal)
@@ -43,24 +43,24 @@ function run<A extends unknown[]>(fn: (...args: A) => void): (...args: A) => voi
 
 program
   .command("init")
-  .description("initialize a memlog root (git repo, config, merge driver)")
+  .description("initialize a gitmem root (git repo, config, merge driver)")
   .action(
     run(() => {
       const r = root();
-      MemLog.init(r);
+      GitMem.init(r);
       if (!fs.existsSync(path.join(r, ".git"))) execFileSync("git", ["init", "-q"], { cwd: r });
       const gitignore = path.join(r, ".gitignore");
       if (!fs.existsSync(gitignore) || !fs.readFileSync(gitignore, "utf8").includes("proj/")) {
         fs.appendFileSync(gitignore, "proj/\n");
       }
       const attrs = path.join(r, ".gitattributes");
-      const rule = "log/**/*.jsonl merge=memlog-union\n";
-      if (!fs.existsSync(attrs) || !fs.readFileSync(attrs, "utf8").includes("memlog-union")) {
+      const rule = "log/**/*.jsonl merge=gitmem-union\n";
+      if (!fs.existsSync(attrs) || !fs.readFileSync(attrs, "utf8").includes("gitmem-union")) {
         fs.appendFileSync(attrs, rule);
       }
-      execFileSync("git", ["config", "merge.memlog-union.name", "memlog union merge"], { cwd: r });
-      execFileSync("git", ["config", "merge.memlog-union.driver", "memlog merge-driver %A %B"], { cwd: r });
-      process.stderr.write(`initialized memlog root at ${r}\n`);
+      execFileSync("git", ["config", "merge.gitmem-union.name", "gitmem union merge"], { cwd: r });
+      execFileSync("git", ["config", "merge.gitmem-union.driver", "gitmem merge-driver %A %B"], { cwd: r });
+      process.stderr.write(`initialized gitmem root at ${r}\n`);
     }),
   );
 
@@ -80,7 +80,7 @@ program
   .argument("[file]", 'NDJSON file for --json, or "-" for stdin', "-")
   .action(
     run((file: string) => {
-      const log = MemLog.open(root());
+      const log = GitMem.open(root());
       const opts = (program.commands.find((c) => c.name() === "append") as Command).opts();
       if (opts.json) {
         const input = fs.readFileSync(file === "-" ? 0 : file, "utf8");
@@ -126,12 +126,12 @@ program
   .command("project")
   .description("rebuild projections (incremental)")
   .option("--force")
-  .action(run(() => void MemLog.open(root()).project({ force: true })));
+  .action(run(() => void GitMem.open(root()).project({ force: true })));
 
 program
   .command("rebuild")
   .description("always full rebuild")
-  .action(run(() => void MemLog.open(root()).project({ force: true })));
+  .action(run(() => void GitMem.open(root()).project({ force: true })));
 
 program
   .command("brief")
@@ -140,7 +140,7 @@ program
   .action(
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "brief") as Command).opts();
-      process.stdout.write(MemLog.open(root()).brief(capability(), opts.scope));
+      process.stdout.write(GitMem.open(root()).brief(capability(), opts.scope));
     }),
   );
 
@@ -153,7 +153,7 @@ program
   .action(
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "facts") as Command).opts();
-      const facts = MemLog.open(root()).facts(capability(), {
+      const facts = GitMem.open(root()).facts(capability(), {
         scope: opts.scope,
         status: opts.status as FactStatus | undefined,
       });
@@ -169,7 +169,7 @@ program
   .action(
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "conflicts") as Command).opts();
-      const conflicts = MemLog.open(root()).conflicts(capability());
+      const conflicts = GitMem.open(root()).conflicts(capability());
       if (opts.json) for (const c of conflicts) process.stdout.write(JSON.stringify(c) + "\n");
       else for (const c of conflicts) process.stderr.write(`${c.id} [${c.detected_by}] ${c.members.join(" vs ")}\n`);
     }),
@@ -180,7 +180,7 @@ program
   .description("event + full derivation chain")
   .action(
     run((id: string) => {
-      const node = MemLog.open(root()).trace(capability(), id);
+      const node = GitMem.open(root()).trace(capability(), id);
       process.stdout.write(JSON.stringify(node, null, 2) + "\n");
     }),
   );
@@ -190,7 +190,7 @@ program
   .description("ancestry tree, one line per hop")
   .action(
     run((id: string) => {
-      const node = MemLog.open(root()).trace(capability(), id);
+      const node = GitMem.open(root()).trace(capability(), id);
       const walk = (n: typeof node, depth: number) => {
         process.stdout.write(`${"  ".repeat(depth)}${n.event.id} [${n.event.kind}] ${n.event.body.slice(0, 80)}\n`);
         for (const d of n.derived_from) walk(d, depth + 1);
@@ -206,7 +206,7 @@ program
   .action(
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "stats") as Command).opts();
-      const p = MemLog.open(root()).project();
+      const p = GitMem.open(root()).project();
       const stats = opts.scope
         ? Object.fromEntries(Object.entries(p.stats).filter(([s]) => s === opts.scope || s.startsWith(opts.scope + "/")))
         : p.stats;
@@ -219,7 +219,7 @@ program
   .description("integrity check")
   .action(
     run(() => {
-      const result = MemLog.open(root()).verify();
+      const result = GitMem.open(root()).verify();
       if (!result.ok) {
         for (const e of result.errors) process.stderr.write(e + "\n");
         process.exit(2);
@@ -236,11 +236,11 @@ program
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "commit") as Command).opts();
       const r = root();
-      execFileSync("git", ["add", "log", ".gitattributes", ".gitignore", "memlog.config.json"], { cwd: r });
+      execFileSync("git", ["add", "log", ".gitattributes", ".gitignore", "gitmem.config.json"], { cwd: r });
       const staged = execFileSync("git", ["diff", "--cached", "--numstat", "--", "log"], { cwd: r }).toString();
       const added = staged.split("\n").filter(Boolean).reduce((n, l) => n + parseInt(l, 10), 0);
-      const scopes = [...new Set(MemLog.open(r).events().map((e) => e.scope.split("/").slice(0, 2).join("/")))];
-      const msg = opts.message ?? `memlog: ${added} events, scopes ${scopes.join(", ")}`;
+      const scopes = [...new Set(GitMem.open(r).events().map((e) => e.scope.split("/").slice(0, 2).join("/")))];
+      const msg = opts.message ?? `gitmem: ${added} events, scopes ${scopes.join(", ")}`;
       execFileSync("git", ["commit", "-q", "-m", msg], { cwd: r });
       process.stderr.write(`committed: ${msg}\n`);
     }),
@@ -259,13 +259,13 @@ program
 program
   .command("stale")
   .description("list live facts whose meta.source_uri anchor changed in git since the fact was written")
-  .option("--repo <path>", "git repo the anchors are relative to (default: the memlog root's repo)")
+  .option("--repo <path>", "git repo the anchors are relative to (default: the gitmem root's repo)")
   .option("--json")
   .action(
     run(() => {
       const opts = (program.commands.find((c) => c.name() === "stale") as Command).opts();
       const repo = path.resolve(opts.repo ?? root());
-      const log = MemLog.open(root());
+      const log = GitMem.open(root());
       const facts = log.facts(capability(), { status: "live" });
       const eventById = new Map(log.events().map((e) => [e.id, e]));
       let found = 0;

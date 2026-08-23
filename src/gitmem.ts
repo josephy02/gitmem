@@ -20,19 +20,19 @@ import type {
   VerifyResult,
 } from "./types.js";
 
-export class MemLog {
+export class GitMem {
   private constructor(readonly root: string) {}
 
-  static open(root: string): MemLog {
-    if (!fs.existsSync(path.join(root, "memlog.config.json"))) {
-      throw new Error(`${root} is not a memlog root (missing memlog.config.json); run memlog init`);
+  static open(root: string): GitMem {
+    if (!fs.existsSync(path.join(root, "gitmem.config.json"))) {
+      throw new Error(`${root} is not a gitmem root (missing gitmem.config.json); run gitmem init`);
     }
-    return new MemLog(root);
+    return new GitMem(root);
   }
 
-  static init(root: string): MemLog {
+  static init(root: string): GitMem {
     fs.mkdirSync(root, { recursive: true });
-    const config = path.join(root, "memlog.config.json");
+    const config = path.join(root, "gitmem.config.json");
     if (!fs.existsSync(config)) {
       fs.writeFileSync(
         config,
@@ -40,7 +40,7 @@ export class MemLog {
       );
     }
     fs.mkdirSync(path.join(root, "log"), { recursive: true });
-    return new MemLog(root);
+    return new GitMem(root);
   }
 
   append(input: AppendInput): string {

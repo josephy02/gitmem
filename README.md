@@ -1,48 +1,48 @@
-# memlog
+# gitmem
 
 **Persistent, reviewable memory for your AI agents — in a git repo you can read, diff, and blame.**
 
-Your coding agent forgets everything between sessions. memlog gives it an append-only event log of facts, decisions, and corrections, stored as plain JSONL in git, with deterministic projections: a token-budgeted **brief** to inject into context, a current-facts view, and a conflict queue that surfaces contradictions instead of silently overwriting them.
+Your coding agent forgets everything between sessions. gitmem gives it an append-only event log of facts, decisions, and corrections, stored as plain JSONL in git, with deterministic projections: a token-budgeted **brief** to inject into context, a current-facts view, and a conflict queue that surfaces contradictions instead of silently overwriting them.
 
 No vector store. No LLM calls. No server. A memory system you can `git log`.
 
 ## 60-second quickstart
 
 ```bash
-git clone https://github.com/josephy02/memlog && cd memlog
-npm install && npm run build && npm link   # puts `memlog` on your PATH
+git clone https://github.com/josephy02/gitmem && cd gitmem
+npm install && npm run build && npm link   # puts `gitmem` on your PATH
 
-memlog init --root ./memory
+gitmem init --root ./memory
 
-memlog --root ./memory append --scope team/core --kind decision \
+gitmem --root ./memory append --scope team/core --kind decision \
   --body "Mobile still depends on the old auth module; do not refactor." \
   --author human:joseph
 
-memlog --root ./memory append --scope team/core \
+gitmem --root ./memory append --scope team/core \
   --body "The staging DB is reset every Sunday 03:00 UTC." \
   --author agent:builder-3
 
-memlog --root ./memory brief         # the context bootstrap, capped at 1,500 tokens
-memlog --root ./memory facts --json  # current-value view, NDJSON
-memlog --root ./memory conflicts     # contradictions, surfaced never auto-resolved
-memlog --root ./memory commit        # git commit of the log, on your cadence
+gitmem --root ./memory brief         # the context bootstrap, capped at 1,500 tokens
+gitmem --root ./memory facts --json  # current-value view, NDJSON
+gitmem --root ./memory conflicts     # contradictions, surfaced never auto-resolved
+gitmem --root ./memory commit        # git commit of the log, on your cadence
 ```
 
 Or explore the bundled demo — 45 realistic events with corrections, a retraction, a promotion, and a live conflict:
 
 ```bash
-memlog --root /tmp/demo init
-memlog --root /tmp/demo append --json --force - < demo/events.ndjson
-memlog --root /tmp/demo brief
+gitmem --root /tmp/demo init
+gitmem --root /tmp/demo append --json --force - < demo/events.ndjson
+gitmem --root /tmp/demo brief
 ```
 
 ## How it works
 
-1. **The log is the only source of truth.** One event per line in `log/YYYY/MM/DD.jsonl`. Nothing is ever mutated or deleted — corrections and retractions are new events that supersede old ones, so provenance is always reconstructible (`memlog trace <id>`).
-2. **Projections are pure functions of the log.** `facts.json` (current values with live/superseded/retracted/expired/contested status), `brief.md` (the always-injected core, hard-capped at 1,500 tokens, decisions first), `conflicts.json`, `stats.json`. `memlog rebuild` is byte-identical to an incremental build — that's a test.
+1. **The log is the only source of truth.** One event per line in `log/YYYY/MM/DD.jsonl`. Nothing is ever mutated or deleted — corrections and retractions are new events that supersede old ones, so provenance is always reconstructible (`gitmem trace <id>`).
+2. **Projections are pure functions of the log.** `facts.json` (current values with live/superseded/retracted/expired/contested status), `brief.md` (the always-injected core, hard-capped at 1,500 tokens, decisions first), `conflicts.json`, `stats.json`. `gitmem rebuild` is byte-identical to an incremental build — that's a test.
 3. **Conflicts are surfaced, never auto-resolved.** Deterministic heuristics (divergent corrections, negation pairs, same-subject divergence) flag contradictions; both sides are returned together as `contested`. Resolution is a human act: write a correction that supersedes the losers.
 4. **Scope is enforced at one choke point.** Every read path — search, point-get, brief, trace — goes through a single capability-checked function. Segment-aware: `team/core` grants `team/core/auth` but never `team/core-secrets`. Promotions change a fact's *effective* scope, and access control follows the effective scope, so narrowing actually narrows.
-5. **Git-native for real.** `memlog init` installs a union merge driver: two branches appending to the same day file merge automatically — union of lines, sorted by ULID, always correct because events are immutable. `memlog verify` catches duplicate ids from bad merges.
+5. **Git-native for real.** `gitmem init` installs a union merge driver: two branches appending to the same day file merge automatically — union of lines, sorted by ULID, always correct because events are immutable. `gitmem verify` catches duplicate ids from bad merges.
 
 ## Event format
 
@@ -57,9 +57,9 @@ Five event kinds: `observation`, `decision`, `correction`, `retraction`, `promot
 ## Library
 
 ```ts
-import { MemLog } from "memlog";
+import { GitMem } from "gitmem";
 
-const log = MemLog.open("./memory");
+const log = GitMem.open("./memory");
 const cap = { principal: "agent:builder-3", scopes: ["team/core"], mode: "read" as const };
 
 log.append({ scope: "team/core", kind: "observation", body: "...", author: { kind: "agent", id: "builder-3" } });
@@ -83,7 +83,7 @@ Give any MCP client (Claude Code, Claude Desktop, anything speaking MCP) persist
 ```json
 {
   "mcpServers": {
-    "memlog": { "command": "memlog", "args": ["--root", "/path/to/memory", "serve"] }
+    "gitmem": { "command": "gitmem", "args": ["--root", "/path/to/memory", "serve"] }
   }
 }
 ```
@@ -95,7 +95,7 @@ Exposes five tools over stdio: `memory_append`, `memory_brief`, `memory_facts`, 
 A fact can anchor itself to code via `meta.source_uri` (e.g. `"src/auth.ts#validateToken"`). Because the log lives in git next to the code, staleness detection is just a `git log`:
 
 ```bash
-memlog stale            # lists live facts whose anchored file changed since the fact was written
+gitmem stale            # lists live facts whose anchored file changed since the fact was written
 ```
 
 ```

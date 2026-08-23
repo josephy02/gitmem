@@ -1,15 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { MemLog } from "./memlog.js";
+import { GitMem } from "./gitmem.js";
 import type { Capability, FactStatus } from "./types.js";
 
-/** MCP server exposing memlog over stdio. One tool per read/write surface;
+/** MCP server exposing gitmem over stdio. One tool per read/write surface;
  *  all reads go through the same capability choke point as the CLI. */
 export async function serveMcp(root: string, cap: Capability, author: string): Promise<void> {
-  const log = MemLog.open(root);
+  const log = GitMem.open(root);
   const [akind, ...aid] = author.split(":");
-  const server = new McpServer({ name: "memlog", version: "0.1.0" });
+  const server = new McpServer({ name: "gitmem", version: "0.1.0" });
 
   const text = (s: string) => ({ content: [{ type: "text" as const, text: s }] });
 

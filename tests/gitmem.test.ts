@@ -5,7 +5,7 @@ import * as path from "node:path";
 import fc from "fast-check";
 import { ulid } from "ulid";
 import { beforeEach, describe, expect, it } from "vitest";
-import { MemLog } from "../src/memlog.js";
+import { GitMem } from "../src/gitmem.js";
 import { ValidationError, readAllEvents } from "../src/log.js";
 import { BRIEF_TOKEN_CAP, estimateTokens, project } from "../src/projections.js";
 import type { Capability, MemEvent } from "../src/types.js";
@@ -14,14 +14,14 @@ const ADMIN: Capability = { principal: "human:test", scopes: [""], mode: "admin"
 const HUMAN = { kind: "human" as const, id: "joseph" };
 
 let root: string;
-let log: MemLog;
+let log: GitMem;
 
 beforeEach(() => {
-  root = fs.mkdtempSync(path.join(os.tmpdir(), "memlog-"));
-  log = MemLog.init(root);
+  root = fs.mkdtempSync(path.join(os.tmpdir(), "gitmem-"));
+  log = GitMem.init(root);
 });
 
-function add(over: Partial<Parameters<MemLog["append"]>[0]> = {}): string {
+function add(over: Partial<Parameters<GitMem["append"]>[0]> = {}): string {
   return log.append({ scope: "team/core", author: HUMAN, kind: "observation", body: `fact ${ulid()}`, ...over });
 }
 
@@ -103,8 +103,8 @@ describe("scope isolation (§9.3)", () => {
         }),
         fc.constantFrom("team/core", "team/other", "ops", "team"),
         (scopes, capScope) => {
-          const r = fs.mkdtempSync(path.join(os.tmpdir(), "memlog-prop-"));
-          const l = MemLog.init(r);
+          const r = fs.mkdtempSync(path.join(os.tmpdir(), "gitmem-prop-"));
+          const l = GitMem.init(r);
           const idScope = new Map<string, string>();
           for (const s of scopes) {
             const id = l.append({ scope: s, author: HUMAN, kind: "observation", body: `fact in ${s} ${ulid()}` });
@@ -231,8 +231,8 @@ describe("merge (§9.7)", () => {
     git(["init", "-q"]);
     git(["config", "user.email", "t@t"]);
     git(["config", "user.name", "t"]);
-    git(["config", "merge.memlog-union.driver", `node ${cli} merge-driver %A %B`]);
-    fs.writeFileSync(path.join(root, ".gitattributes"), "log/**/*.jsonl merge=memlog-union\n");
+    git(["config", "merge.gitmem-union.driver", `node ${cli} merge-driver %A %B`]);
+    fs.writeFileSync(path.join(root, ".gitattributes"), "log/**/*.jsonl merge=gitmem-union\n");
     fs.writeFileSync(path.join(root, ".gitignore"), "proj/\n");
     add({ body: "shared base fact" });
     git(["add", "-A"]);

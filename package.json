@@ -1,5 +1,5 @@
 {
-  "name": "memlog",
+  "name": "gitmem",
   "version": "0.1.0",
   "description": "Git-native, append-only event log with deterministic projections, for agent memory.",
   "type": "module",
@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "bin": {
-    "memlog": "./dist/cli.js"
+    "gitmem": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -34,7 +34,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/josephy02/memlog.git"
+    "url": "git+https://github.com/josephy02/gitmem.git"
   },
   "author": "Joseph Yared",
   "keywords": [

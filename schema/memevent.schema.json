@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/josephy02/memlog/schema/memevent.schema.json",
+  "$id": "https://github.com/josephy02/gitmem/schema/memevent.schema.json",
   "title": "MemEvent",
-  "description": "One line of a memlog log/YYYY/MM/DD.jsonl file. The format is the product: any language can write events without the memlog library.",
+  "description": "One line of a gitmem log/YYYY/MM/DD.jsonl file. The format is the product: any language can write events without the gitmem library.",
   "type": "object",
   "required": ["id", "ts", "scope", "author", "kind", "body", "derived_from", "supersedes", "confidence"],
   "additionalProperties": false,
