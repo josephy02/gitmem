@@ -31,5 +31,18 @@
     "fast-check": "^3.19.0",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josephy02/memlog.git"
+  },
+  "author": "Joseph Yared",
+  "keywords": [
+    "agent-memory",
+    "event-log",
+    "mcp",
+    "append-only",
+    "git-native",
+    "llm"
+  ]
 }

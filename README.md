@@ -9,7 +9,9 @@ No vector store. No LLM calls. No server. A memory system you can `git log`.
 ## 60-second quickstart
 
 ```bash
-npm install -g memlog        # or: npx memlog
+git clone https://github.com/josephy02/memlog && cd memlog
+npm install && npm run build && npm link   # puts `memlog` on your PATH
+
 memlog init --root ./memory
 
 memlog --root ./memory append --scope team/core --kind decision \
@@ -114,7 +116,7 @@ No embeddings, no LLM, no index to maintain — the same property that makes mem
 ```bash
 npm install
 npm run build
-npm test        # 15 tests incl. property-based scope isolation and a real git-branch merge
+npm test        # 16 tests incl. property-based scope isolation and a real git-branch merge
 ```
 
 Performance: full projection of a 10k-event log runs in ~50ms.
