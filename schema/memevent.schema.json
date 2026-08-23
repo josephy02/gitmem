@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/josephy02/memlog/schema/memevent.schema.json",
+  "title": "MemEvent",
+  "description": "One line of a memlog log/YYYY/MM/DD.jsonl file. The format is the product: any language can write events without the memlog library.",
+  "type": "object",
+  "required": ["id", "ts", "scope", "author", "kind", "body", "derived_from", "supersedes", "confidence"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$",
+      "description": "ULID. Lexicographically sortable, time-encoding, no coordination needed."
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$",
+      "description": "ISO-8601 UTC with Z. Redundant with the ULID but human-readable in diffs."
+    },
+    "scope": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*(\\/[a-z0-9][a-z0-9._-]*)*$",
+      "description": "Hierarchical path, e.g. team/core/project/auth-rewrite."
+    },
+    "author": {
+      "type": "object",
+      "required": ["kind", "id"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["agent", "human", "system"] },
+        "id": { "type": "string" },
+        "session": { "type": "string" }
+      }
+    },
+    "kind": { "enum": ["observation", "decision", "correction", "retraction", "promotion"] },
+    "body": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4000,
+      "description": "The memory itself. One self-contained claim."
+    },
+    "derived_from": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+      "description": "Event ids this was derived from. Always present, may be empty."
+    },
+    "supersedes": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$" },
+      "description": "Required non-empty for correction, retraction, and promotion."
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "ttl_hint": { "type": "string", "format": "date-time" },
+    "meta": {
+      "type": "object",
+      "description": "Free-form. Reserved keys: tags (string[]), source_uri (string)."
+    }
+  }
+}

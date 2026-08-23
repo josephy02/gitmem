@@ -1,0 +1,95 @@
+# memlog
+
+**Persistent, reviewable memory for your AI agents — in a git repo you can read, diff, and blame.**
+
+Your coding agent forgets everything between sessions. memlog gives it an append-only event log of facts, decisions, and corrections, stored as plain JSONL in git, with deterministic projections: a token-budgeted **brief** to inject into context, a current-facts view, and a conflict queue that surfaces contradictions instead of silently overwriting them.
+
+No vector store. No LLM calls. No server. A memory system you can `git log`.
+
+## 60-second quickstart
+
+```bash
+npm install -g memlog        # or: npx memlog
+memlog init --root ./memory
+
+memlog --root ./memory append --scope team/core --kind decision \
+  --body "Mobile still depends on the old auth module; do not refactor." \
+  --author human:joseph
+
+memlog --root ./memory append --scope team/core \
+  --body "The staging DB is reset every Sunday 03:00 UTC." \
+  --author agent:builder-3
+
+memlog --root ./memory brief         # the context bootstrap, capped at 1,500 tokens
+memlog --root ./memory facts --json  # current-value view, NDJSON
+memlog --root ./memory conflicts     # contradictions, surfaced never auto-resolved
+memlog --root ./memory commit        # git commit of the log, on your cadence
+```
+
+Or explore the bundled demo — 45 realistic events with corrections, a retraction, a promotion, and a live conflict:
+
+```bash
+memlog --root /tmp/demo init
+memlog --root /tmp/demo append --json --force - < demo/events.ndjson
+memlog --root /tmp/demo brief
+```
+
+## How it works
+
+1. **The log is the only source of truth.** One event per line in `log/YYYY/MM/DD.jsonl`. Nothing is ever mutated or deleted — corrections and retractions are new events that supersede old ones, so provenance is always reconstructible (`memlog trace <id>`).
+2. **Projections are pure functions of the log.** `facts.json` (current values with live/superseded/retracted/expired/contested status), `brief.md` (the always-injected core, hard-capped at 1,500 tokens, decisions first), `conflicts.json`, `stats.json`. `memlog rebuild` is byte-identical to an incremental build — that's a test.
+3. **Conflicts are surfaced, never auto-resolved.** Deterministic heuristics (divergent corrections, negation pairs, same-subject divergence) flag contradictions; both sides are returned together as `contested`. Resolution is a human act: write a correction that supersedes the losers.
+4. **Scope is enforced at one choke point.** Every read path — search, point-get, brief, trace — goes through a single capability-checked function. Segment-aware: `team/core` grants `team/core/auth` but never `team/core-secrets`. Promotions change a fact's *effective* scope, and access control follows the effective scope, so narrowing actually narrows.
+5. **Git-native for real.** `memlog init` installs a union merge driver: two branches appending to the same day file merge automatically — union of lines, sorted by ULID, always correct because events are immutable. `memlog verify` catches duplicate ids from bad merges.
+
+## Event format
+
+The format is the product. One JSON object per line, schema in [`schema/memevent.schema.json`](schema/memevent.schema.json) — any language can write events without this library:
+
+```json
+{"id":"01K2X9...","ts":"2026-08-15T14:03:11.000Z","scope":"team/core","author":{"kind":"human","id":"joseph"},"kind":"decision","body":"Mobile still depends on the old auth module; do not refactor.","derived_from":[],"supersedes":[],"confidence":1}
+```
+
+Five event kinds: `observation`, `decision`, `correction`, `retraction`, `promotion` (scope changes are events too — sharing has provenance).
+
+## Library
+
+```ts
+import { MemLog } from "memlog";
+
+const log = MemLog.open("./memory");
+const cap = { principal: "agent:builder-3", scopes: ["team/core"], mode: "read" as const };
+
+log.append({ scope: "team/core", kind: "observation", body: "...", author: { kind: "agent", id: "builder-3" } });
+log.brief(cap);        // markdown string, reprojects lazily if the log advanced
+log.facts(cap, { status: "live" });
+log.conflicts(cap);
+log.trace(cap, id);    // full derivation ancestry
+```
+
+## Design commitments
+
+- **No LLM in the write path.** Writes are cheap, lossless, synchronous.
+- **No write-time dedup.** Contradictions look like near-duplicates; a write-time gate would reject exactly the events the conflict detector needs to see. Everything is admitted; resolution happens at projection time.
+- **`brief.override.md`** — a human-authored file that always wins the top of the brief.
+- **Human-first storage.** `git diff` a memory change. `git blame` a fact. Review an agent's memory in a PR.
+
+## Roadmap (deliberately not in v1)
+
+- **MCP server** — expose `append` / `brief` / `facts` as tools so any MCP client (Claude Code, etc.) gets persistent memory for free.
+- **Git-anchored staleness** — facts carrying a `meta.source_uri` anchor to code can be auto-flagged when the anchored file changes; the log is already in git, so staleness detection is a `git diff`.
+- Retrieval beyond scope/substring filtering. Not until the log has been in daily use.
+
+## Development
+
+```bash
+npm install
+npm run build
+npm test        # 15 tests incl. property-based scope isolation and a real git-branch merge
+```
+
+Performance: full projection of a 10k-event log runs in ~50ms.
+
+## License
+
+MIT
