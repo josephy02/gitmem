@@ -2,9 +2,16 @@
 
 **Persistent, reviewable memory for your AI agents — in a git repo you can read, diff, and blame.**
 
+[![CI](https://github.com/josephy02/gitmem/actions/workflows/ci.yml/badge.svg)](https://github.com/josephy02/gitmem/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)
+![No vector DB](https://img.shields.io/badge/vector%20DB-none-orange)
+
 Your coding agent forgets everything between sessions. gitmem gives it an append-only event log of facts, decisions, and corrections, stored as plain JSONL in git, with deterministic projections: a token-budgeted **brief** to inject into context, a current-facts view, and a conflict queue that surfaces contradictions instead of silently overwriting them.
 
 No vector store. No LLM calls. No server. A memory system you can `git log`.
+
+<p align="center"><img src="assets/demo.svg" alt="gitmem demo" width="780"></p>
 
 ## 60-second quickstart
 
@@ -37,6 +44,24 @@ gitmem --root /tmp/demo brief
 ```
 
 ## How it works
+
+```mermaid
+flowchart LR
+    subgraph writers[" "]
+        CLI[CLI / library]
+        MCP[MCP client<br/>Claude Code etc.]
+    end
+    CLI -->|append| LOG
+    MCP -->|memory_append| LOG
+    LOG[("log/YYYY/MM/DD.jsonl<br/>append-only, in git")]
+    LOG -->|pure function| PROJ[projections]
+    PROJ --> BRIEF["brief.md<br/>≤1500 tokens"]
+    PROJ --> FACTS["facts.json<br/>live/superseded/contested"]
+    PROJ --> CONF["conflicts.json<br/>never auto-resolved"]
+    LOG -.->|every read| CHOKE{{"readEvents()<br/>capability choke point"}}
+    CHOKE --> BRIEF & FACTS & CONF
+    GIT[git history] -->|"gitmem stale"| FACTS
+```
 
 1. **The log is the only source of truth.** One event per line in `log/YYYY/MM/DD.jsonl`. Nothing is ever mutated or deleted — corrections and retractions are new events that supersede old ones, so provenance is always reconstructible (`gitmem trace <id>`).
 2. **Projections are pure functions of the log.** `facts.json` (current values with live/superseded/retracted/expired/contested status), `brief.md` (the always-injected core, hard-capped at 1,500 tokens, decisions first), `conflicts.json`, `stats.json`. `gitmem rebuild` is byte-identical to an incremental build — that's a test.
