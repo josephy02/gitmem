@@ -290,3 +290,24 @@ describe("validation", () => {
     expect(add({ ts: "2020-01-01T00:00:00.000Z", id: ulid(Date.parse("2020-01-01")), force: true })).toBeTruthy();
   });
 });
+
+describe("stale (git-anchored staleness)", () => {
+  it("flags a fact whose source_uri anchor changed after the fact was written", () => {
+    const cli = path.resolve("dist/cli.js");
+    const git = (args: string[]) => execFileSync("git", args, { cwd: root });
+    const cliRun = (args: string[]) => execFileSync("node", [cli, "--root", root, ...args], { cwd: root }).toString();
+    execFileSync("node", [cli, "--root", root, "init"], { cwd: root });
+    git(["config", "user.email", "t@t"]);
+    git(["config", "user.name", "t"]);
+    fs.writeFileSync(path.join(root, "auth.ts"), "export const x = 1\n");
+    git(["add", "-A"]);
+    git(["commit", "-qm", "initial"]);
+    log.append({ scope: "team/core", author: HUMAN, kind: "observation", body: "x is always 1", meta: { source_uri: "auth.ts" } });
+    fs.writeFileSync(path.join(root, "auth.ts"), "export const x = 2\n");
+    git(["add", "auth.ts"]);
+    git(["commit", "-qm", "change x"]);
+    const out = cliRun(["stale", "--json"]);
+    expect(out).toContain("x is always 1");
+    expect(out).toContain("change x");
+  });
+});

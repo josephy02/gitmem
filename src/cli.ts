@@ -247,6 +247,55 @@ program
   );
 
 program
+  .command("serve")
+  .description("run an MCP server over stdio (tools: memory_append, memory_brief, memory_facts, memory_conflicts, memory_trace)")
+  .option("--author <kind:id>", "author recorded on appended events", "agent:mcp")
+  .action(async () => {
+    const opts = (program.commands.find((c) => c.name() === "serve") as Command).opts();
+    const { serveMcp } = await import("./mcp.js");
+    await serveMcp(root(), capability(), opts.author);
+  });
+
+program
+  .command("stale")
+  .description("list live facts whose meta.source_uri anchor changed in git since the fact was written")
+  .option("--repo <path>", "git repo the anchors are relative to (default: the memlog root's repo)")
+  .option("--json")
+  .action(
+    run(() => {
+      const opts = (program.commands.find((c) => c.name() === "stale") as Command).opts();
+      const repo = path.resolve(opts.repo ?? root());
+      const log = MemLog.open(root());
+      const facts = log.facts(capability(), { status: "live" });
+      const eventById = new Map(log.events().map((e) => [e.id, e]));
+      let found = 0;
+      for (const f of facts) {
+        const anchor = eventById.get(f.id)?.meta?.source_uri;
+        if (typeof anchor !== "string") continue;
+        const file = anchor.split("#")[0].replace(/^file:\/\//, "");
+        let commits: string;
+        try {
+          commits = execFileSync(
+            "git",
+            ["log", "--oneline", `--since=${f.valid_from}`, "--", file],
+            { cwd: repo },
+          ).toString().trim();
+        } catch {
+          continue; // not a git repo or path outside it — skip, staleness is best-effort
+        }
+        if (commits === "") continue;
+        found++;
+        if (opts.json) {
+          process.stdout.write(JSON.stringify({ fact: f, anchor, commits: commits.split("\n") }) + "\n");
+        } else {
+          process.stderr.write(`[stale?] ${f.body}\n  anchor: ${anchor}\n  changed by:\n${commits.split("\n").map((c) => `    ${c}`).join("\n")}\n`);
+        }
+      }
+      process.stderr.write(found === 0 ? "no stale facts\n" : `${found} possibly-stale fact(s)\n`);
+    }),
+  );
+
+program
   .command("merge-driver <ours> <theirs>", { hidden: true })
   .description("git merge driver: union of lines, sorted by ULID")
   .action(

@@ -74,10 +74,39 @@ log.trace(cap, id);    // full derivation ancestry
 - **`brief.override.md`** — a human-authored file that always wins the top of the brief.
 - **Human-first storage.** `git diff` a memory change. `git blame` a fact. Review an agent's memory in a PR.
 
+## MCP server
+
+Give any MCP client (Claude Code, Claude Desktop, anything speaking MCP) persistent memory in one line:
+
+```json
+{
+  "mcpServers": {
+    "memlog": { "command": "memlog", "args": ["--root", "/path/to/memory", "serve"] }
+  }
+}
+```
+
+Exposes five tools over stdio: `memory_append`, `memory_brief`, `memory_facts`, `memory_conflicts`, `memory_trace`. Appends are attributed to `agent:mcp` by default (`--author` to change); reads go through the same capability choke point as everything else.
+
+## Git-anchored staleness
+
+A fact can anchor itself to code via `meta.source_uri` (e.g. `"src/auth.ts#validateToken"`). Because the log lives in git next to the code, staleness detection is just a `git log`:
+
+```bash
+memlog stale            # lists live facts whose anchored file changed since the fact was written
+```
+
+```
+[stale?] validateToken always returns true in dev mode
+  anchor: src/auth.ts#validateToken
+  changed by:
+    e1faa27 flip validateToken default
+```
+
+No embeddings, no LLM, no index to maintain — the same property that makes memory reviewable makes it self-invalidating.
+
 ## Roadmap (deliberately not in v1)
 
-- **MCP server** — expose `append` / `brief` / `facts` as tools so any MCP client (Claude Code, etc.) gets persistent memory for free.
-- **Git-anchored staleness** — facts carrying a `meta.source_uri` anchor to code can be auto-flagged when the anchored file changes; the log is already in git, so staleness detection is a `git diff`.
 - Retrieval beyond scope/substring filtering. Not until the log has been in daily use.
 
 ## Development
