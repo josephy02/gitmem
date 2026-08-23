@@ -16,8 +16,7 @@ No vector store. No LLM calls. No server. A memory system you can `git log`.
 ## 60-second quickstart
 
 ```bash
-git clone https://github.com/josephy02/gitmem && cd gitmem
-npm install && npm run build && npm link   # puts `gitmem` on your PATH
+npm install -g gitmem   # or from source: clone, npm install && npm run build && npm link
 
 gitmem init --root ./memory
 
@@ -110,7 +109,7 @@ The fastest way to give Claude Code persistent memory. This repo is a plugin mar
 /plugin install gitmem@gitmem
 ```
 
-(Requires the `gitmem` CLI on your PATH — see the quickstart above.)
+(Requires the `gitmem` CLI: `npm install -g gitmem`.)
 
 What you get:
 
