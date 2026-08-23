@@ -1,0 +1,10 @@
+{
+  "name": "gitmem",
+  "version": "0.1.0",
+  "description": "Persistent, reviewable agent memory in git — brief injection at session start, memory tools over MCP.",
+  "author": { "name": "Joseph Yared" },
+  "homepage": "https://github.com/josephy02/gitmem",
+  "repository": "https://github.com/josephy02/gitmem",
+  "license": "MIT",
+  "keywords": ["memory", "mcp", "git"]
+}

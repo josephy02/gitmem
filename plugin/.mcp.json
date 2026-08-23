@@ -1,0 +1,6 @@
+{
+  "gitmem": {
+    "command": "bash",
+    "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/serve.sh"]
+  }
+}

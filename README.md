@@ -101,6 +101,24 @@ log.trace(cap, id);    // full derivation ancestry
 - **`brief.override.md`** — a human-authored file that always wins the top of the brief.
 - **Human-first storage.** `git diff` a memory change. `git blame` a fact. Review an agent's memory in a PR.
 
+## Claude Code plugin
+
+The fastest way to give Claude Code persistent memory. This repo is a plugin marketplace:
+
+```
+/plugin marketplace add josephy02/gitmem
+/plugin install gitmem@gitmem
+```
+
+(Requires the `gitmem` CLI on your PATH — see the quickstart above.)
+
+What you get:
+
+- **Memory brief at session start** — a `SessionStart` hook injects `gitmem brief` into context, so every session begins knowing your project's decisions and facts. No gitmem root in the project? The hook is a silent no-op.
+- **Memory tools over MCP** — Claude can append observations, decisions, and corrections as it works. The root is auto-discovered (`$GITMEM_ROOT`, `./.gitmem`, `./memory`, `./.memory`) and auto-initialized on first use.
+- **`/remember <fact>`** — save a durable fact or decision, with correction semantics when it contradicts an existing memory. `/remember` with no arguments harvests the current conversation.
+- **`/memory-review`** — walk the conflict queue and stale anchors, and resolve them through the log.
+
 ## MCP server
 
 Give any MCP client (Claude Code, Claude Desktop, anything speaking MCP) persistent memory in one line:
@@ -131,10 +149,6 @@ gitmem stale            # lists live facts whose anchored file changed since the
 ```
 
 No embeddings, no LLM, no index to maintain — the same property that makes memory reviewable makes it self-invalidating.
-
-## Roadmap (deliberately not in v1)
-
-- Retrieval beyond scope/substring filtering. Not until the log has been in daily use.
 
 ## Development
 

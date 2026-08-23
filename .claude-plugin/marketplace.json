@@ -1,0 +1,11 @@
+{
+  "name": "gitmem",
+  "owner": { "name": "Joseph Yared" },
+  "plugins": [
+    {
+      "name": "gitmem",
+      "source": "./plugin",
+      "description": "Persistent, reviewable agent memory in git. Injects a memory brief at session start and exposes memory tools over MCP."
+    }
+  ]
+}
