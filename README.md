@@ -13,11 +13,32 @@ No vector store. No LLM calls. No server. A memory system you can `git log`.
 
 <p align="center"><img src="assets/demo.svg" alt="gitmem demo" width="780"></p>
 
+## Installation
+
+Install from npm:
+
+```bash
+npm install -g gitmem
+```
+
+Or, if you are developing or setting up the Claude Code plugin, clone the repository and install it locally:
+
+```bash
+git clone https://github.com/josephy02/gitmem.git
+cd gitmem
+npm install   # builds automatically
+npm link      # puts `gitmem` on your PATH
+```
+
+Verify the install:
+
+```bash
+gitmem --help
+```
+
 ## 60-second quickstart
 
 ```bash
-npm install -g gitmem   # or from source: clone, npm install && npm run build && npm link
-
 gitmem init --root ./memory
 
 gitmem --root ./memory append --scope team/core --kind decision \
