@@ -2,6 +2,7 @@
 
 **Persistent, reviewable memory for your AI agents — in a git repo you can read, diff, and blame.**
 
+[![npm](https://img.shields.io/npm/v/%40josephy02%2Fgitmem)](https://www.npmjs.com/package/@josephy02/gitmem)
 [![CI](https://github.com/josephy02/gitmem/actions/workflows/ci.yml/badge.svg)](https://github.com/josephy02/gitmem/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)
@@ -18,7 +19,7 @@ No vector store. No LLM calls. No server. A memory system you can `git log`.
 Install from npm:
 
 ```bash
-npm install -g gitmem
+npm install -g @josephy02/gitmem
 ```
 
 Or, if you are developing or setting up the Claude Code plugin, clone the repository and install it locally:
@@ -102,7 +103,7 @@ Five event kinds: `observation`, `decision`, `correction`, `retraction`, `promot
 ## Library
 
 ```ts
-import { GitMem } from "gitmem";
+import { GitMem } from "@josephy02/gitmem";
 
 const log = GitMem.open("./memory");
 const cap = { principal: "agent:builder-3", scopes: ["team/core"], mode: "read" as const };
@@ -130,7 +131,7 @@ The fastest way to give Claude Code persistent memory. This repo is a plugin mar
 /plugin install gitmem@gitmem
 ```
 
-(Requires the `gitmem` CLI: `npm install -g gitmem`.)
+(Requires the `gitmem` CLI: `npm install -g @josephy02/gitmem`.)
 
 What you get:
 

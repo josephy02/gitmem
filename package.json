@@ -1,5 +1,5 @@
 {
-  "name": "gitmem",
+  "name": "@josephy02/gitmem",
   "version": "0.1.0",
   "description": "Git-native, append-only event log with deterministic projections, for agent memory.",
   "type": "module",
