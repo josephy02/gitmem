@@ -2,7 +2,7 @@
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Command } from "commander";
+import { Command, type OptionValues } from "commander";
 import { GitMem } from "./gitmem.js";
 import { ValidationError } from "./log.js";
 import type { Capability, Config, FactStatus, MemEvent } from "./types.js";
@@ -79,9 +79,8 @@ program
   .option("--json", "read one event (or NDJSON stream) from stdin")
   .argument("[file]", 'NDJSON file for --json, or "-" for stdin', "-")
   .action(
-    run((file: string) => {
+    run((file: string, opts: OptionValues) => {
       const log = GitMem.open(root());
-      const opts = (program.commands.find((c) => c.name() === "append") as Command).opts();
       if (opts.json) {
         const input = fs.readFileSync(file === "-" ? 0 : file, "utf8");
         for (const line of input.split("\n")) {
@@ -137,8 +136,7 @@ program
   .description("print brief.md to stdout")
   .option("--scope <s>")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "brief") as Command).opts();
+    run((opts: OptionValues) => {
       process.stdout.write(GitMem.open(root()).brief(capability(), opts.scope));
     }),
   );
@@ -150,8 +148,7 @@ program
   .option("--status <status>", "live|superseded|retracted|expired|contested")
   .option("--json")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "facts") as Command).opts();
+    run((opts: OptionValues) => {
       const facts = GitMem.open(root()).facts(capability(), {
         scope: opts.scope,
         status: opts.status as FactStatus | undefined,
@@ -166,8 +163,7 @@ program
   .description("list unresolved conflicts")
   .option("--json")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "conflicts") as Command).opts();
+    run((opts: OptionValues) => {
       const conflicts = GitMem.open(root()).conflicts(capability());
       if (opts.json) for (const c of conflicts) process.stdout.write(JSON.stringify(c) + "\n");
       else for (const c of conflicts) process.stderr.write(`${c.id} [${c.detected_by}] ${c.members.join(" vs ")}\n`);
@@ -203,8 +199,7 @@ program
   .description("per-scope statistics")
   .option("--scope <s>")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "stats") as Command).opts();
+    run((opts: OptionValues) => {
       const p = GitMem.open(root()).project();
       const stats = opts.scope
         ? Object.fromEntries(Object.entries(p.stats).filter(([s]) => s === opts.scope || s.startsWith(opts.scope + "/")))
@@ -232,8 +227,7 @@ program
   .description("stage log/ and commit")
   .option("-m, --message <msg>")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "commit") as Command).opts();
+    run((opts: OptionValues) => {
       const r = root();
       execFileSync("git", ["add", "log", ".gitattributes", ".gitignore", "gitmem.config.json"], { cwd: r });
       const staged = execFileSync("git", ["diff", "--cached", "--numstat", "--", "log"], { cwd: r }).toString();
@@ -249,8 +243,7 @@ program
   .command("serve")
   .description("run an MCP server over stdio (tools: memory_append, memory_brief, memory_facts, memory_conflicts, memory_trace)")
   .option("--author <kind:id>", "author recorded on appended events", "agent:mcp")
-  .action(async () => {
-    const opts = (program.commands.find((c) => c.name() === "serve") as Command).opts();
+  .action(async (opts: OptionValues) => {
     const { serveMcp } = await import("./mcp.js");
     await serveMcp(root(), capability(), opts.author);
   });
@@ -261,8 +254,7 @@ program
   .option("--repo <path>", "git repo the anchors are relative to (default: the gitmem root's repo)")
   .option("--json")
   .action(
-    run(() => {
-      const opts = (program.commands.find((c) => c.name() === "stale") as Command).opts();
+    run((opts: OptionValues) => {
       const repo = path.resolve(opts.repo ?? root());
       const log = GitMem.open(root());
       const facts = log.facts(capability(), { status: "live" });
