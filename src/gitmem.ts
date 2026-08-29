@@ -62,8 +62,10 @@ export class GitMem {
 
   private fresh(): { events: MemEvent[]; projections: Projections } {
     const events = this.events();
-    if (!isProjectionCurrent(this.root, events)) writeProjections(this.root, events);
-    return { events, projections: project(events) };
+    const projections = isProjectionCurrent(this.root, events)
+      ? project(events)
+      : writeProjections(this.root, events); // returns what it just projected
+    return { events, projections };
   }
 
   facts(cap: Capability, filter: FactFilter = {}): Fact[] {
@@ -99,17 +101,16 @@ export class GitMem {
 
   /** Event + full derivation ancestry. Point-get goes through readEvents too. */
   trace(cap: Capability, id: string): TraceNode {
-    const events = this.events();
-    const hit = readEvents(cap, events, { id });
-    if (hit.length === 0) throw new Error(`no such event (or not readable): ${id}`);
-    const visible = new Map(readEvents(cap, events).map((e) => [e.id, e]));
+    const visible = new Map(readEvents(cap, this.events()).map((e) => [e.id, e]));
+    const hit = visible.get(id);
+    if (hit === undefined) throw new Error(`no such event (or not readable): ${id}`);
     const build = (e: MemEvent, seen: Set<string>): TraceNode => ({
       event: e,
       derived_from: e.derived_from
         .filter((d) => visible.has(d) && !seen.has(d))
         .map((d) => build(visible.get(d)!, new Set([...seen, d]))),
     });
-    return build(hit[0], new Set([id]));
+    return build(hit, new Set([id]));
   }
 
   verify(): VerifyResult {
