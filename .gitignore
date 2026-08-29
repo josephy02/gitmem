@@ -1,3 +1,4 @@
 proj/
 node_modules/
 dist/
+.gitmem/
