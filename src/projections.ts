@@ -225,25 +225,14 @@ export function renderBrief(
   return { markdown: body, dropped, tokens: estimateTokens(body) };
 }
 
-/** Write proj/ from the log. Incremental via .checkpoint; falls back to full rebuild
- *  whenever a new event references anything at or before the checkpoint. */
-export function writeProjections(root: string, events: MemEvent[], opts: { force?: boolean } = {}): Projections {
+/** Write proj/ from the log. Always a full rebuild: projections are pure and a
+ *  100k-event log projects in well under 2s, so an incremental path would buy
+ *  nothing and could drift. .checkpoint only records the log tail, so
+ *  isProjectionCurrent can tell whether proj/ is stale. */
+export function writeProjections(root: string, events: MemEvent[]): Projections {
   const projDir = path.join(root, "proj");
   fs.mkdirSync(projDir, { recursive: true });
   const checkpointFile = path.join(projDir, ".checkpoint");
-  const checkpoint = fs.existsSync(checkpointFile) ? fs.readFileSync(checkpointFile, "utf8").trim() : null;
-
-  if (!opts.force && checkpoint !== null) {
-    const newEvents = events.filter((e) => e.id > checkpoint);
-    const unsafe = newEvents.some((e) =>
-      [...e.supersedes, ...e.derived_from].some((ref) => ref <= checkpoint),
-    );
-    // ponytail: "incremental" recomputes from the full event list either way —
-    // projections are pure and a 100k-event log projects in well under 2s.
-    // The checkpoint only tells brief()/facts() whether proj/ is current.
-    void unsafe;
-  }
-
   const now = new Date().toISOString();
   const p = project(events, now);
   const stable = (o: unknown) => JSON.stringify(o, null, 2) + "\n";

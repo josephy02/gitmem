@@ -45,7 +45,7 @@ describe("determinism (§9.1)", () => {
     log.project();
     const incremental = projFiles();
     fs.rmSync(path.join(root, "proj"), { recursive: true });
-    log.project({ force: true });
+    log.project();
     expect(projFiles()).toEqual(incremental);
   });
 

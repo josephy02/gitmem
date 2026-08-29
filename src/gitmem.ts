@@ -56,8 +56,8 @@ export class GitMem {
   }
 
   /** Reprojects lazily: callers never have to remember to project(). */
-  project(opts: { force?: boolean } = {}): Projections {
-    return writeProjections(this.root, this.events(), opts);
+  project(): Projections {
+    return writeProjections(this.root, this.events());
   }
 
   private fresh(): { events: MemEvent[]; projections: Projections } {

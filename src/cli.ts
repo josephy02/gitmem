@@ -124,14 +124,13 @@ program
 
 program
   .command("project")
-  .description("rebuild projections (incremental)")
-  .option("--force")
-  .action(run(() => void GitMem.open(root()).project({ force: true })));
+  .description("rebuild proj/ from the log")
+  .action(run(() => void GitMem.open(root()).project()));
 
 program
   .command("rebuild")
-  .description("always full rebuild")
-  .action(run(() => void GitMem.open(root()).project({ force: true })));
+  .description("rebuild proj/ from the log (alias of project)")
+  .action(run(() => void GitMem.open(root()).project()));
 
 program
   .command("brief")
