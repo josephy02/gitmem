@@ -5,6 +5,7 @@ import type { MemEvent, VerifyResult } from "./types.js";
 
 const SCOPE_RE = /^[a-z0-9][a-z0-9._-]*(\/[a-z0-9][a-z0-9._-]*)*$/;
 const ULID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const STALE_LOCK_MS = 30_000;
 
 export class ValidationError extends Error {}
 
@@ -105,7 +106,15 @@ function withLock<T>(root: string, fn: () => T): T {
       fd = fs.openSync(lock, "wx");
       break;
     } catch {
-      if (Date.now() > deadline) throw new Error(`could not acquire ${lock}`);
+      // A crash between open and unlink leaves the file behind and would brick
+      // every later append. No live append holds the lock for anywhere near
+      // this long, so an old one is dead by definition.
+      try {
+        if (Date.now() - fs.statSync(lock).mtimeMs > STALE_LOCK_MS) fs.unlinkSync(lock);
+      } catch {
+        // lock vanished under us (another writer won the race) — just retry
+      }
+      if (Date.now() > deadline) throw new Error(`could not acquire ${lock} (delete it if no gitmem process is running)`);
       const buf = new SharedArrayBuffer(4);
       Atomics.wait(new Int32Array(buf), 0, 0, 25); // sleep 25ms
     }

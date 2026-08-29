@@ -277,6 +277,24 @@ describe("crash safety (§9.8)", () => {
     for (let i = 0; i < 5; i++) add();
     expect(log.verify().ok).toBe(true);
   });
+
+  it("a lock left behind by a crashed writer is broken, not honored forever", () => {
+    const lock = path.join(root, "log", ".lock");
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(lock, "");
+    const old = Date.now() - 60_000;
+    fs.utimesSync(lock, old / 1000, old / 1000);
+    expect(add()).toBeTruthy();
+    expect(fs.existsSync(lock)).toBe(false);
+  });
+
+  it("a fresh lock is honored (concurrent writer, not a crash)", () => {
+    const lock = path.join(root, "log", ".lock");
+    fs.mkdirSync(path.dirname(lock), { recursive: true });
+    fs.writeFileSync(lock, "");
+    expect(() => add()).toThrow(/could not acquire/);
+    fs.unlinkSync(lock);
+  });
 });
 
 describe("validation", () => {
